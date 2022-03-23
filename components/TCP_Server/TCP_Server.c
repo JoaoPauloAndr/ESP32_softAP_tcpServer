@@ -16,6 +16,7 @@ static void do_retransmit(const int sock)
             rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
             ESP_LOGI(SERVER_TAG, "Received %d bytes: %s", len, rx_buffer);
 
+            char out_buff[256] = "";
             /**Processar comandos AT**/
             int return_index = 0;
             int error = 0;
@@ -31,10 +32,13 @@ static void do_retransmit(const int sock)
                 if(error)
                 {
                     ESP_LOGE(SERVER_TAG, "Erro no input");
+                    strcat(out_buff, "Erro no input.");
                 }
                 else
                 {
                     ESP_LOGI(SERVER_TAG, "Entrada invertida = %s.", output);
+                    strcat(out_buff, "Entrada invertida = ");
+                    strcat(out_buff, output);
                 }
                 free(output);
                 break;
@@ -44,10 +48,12 @@ static void do_retransmit(const int sock)
                 if(error)
                 {
                     ESP_LOGE(SERVER_TAG, "Erro no input");
+                    strcat(out_buff, "Erro no input.");
                 }
                 else
                 {
                     ESP_LOGI(SERVER_TAG, "String de tamanho = %zu.\n", input_size);
+                    sprintf(out_buff, "String de tamanho = %zu.", input_size);
                 }
                 break;
             case Mult_Cmd:
@@ -56,29 +62,67 @@ static void do_retransmit(const int sock)
                 if(error)
                 {
                     ESP_LOGE(SERVER_TAG, "Erro no input");
+                    strcat(out_buff, "Erro no input.");
                 }
                 else
                 {
                     ESP_LOGI(SERVER_TAG, "Resultado da multiplicacao = %d.\n", result);
+                    sprintf(out_buff, "Resultado da multiplicacao = %d.", result);
                 }
                 break;    
             default:
                 ESP_LOGE(SERVER_TAG, "Erro no input");
+                strcat(out_buff, "Erro no input.");
                 break;
             }
 
-            // send() can return less bytes than supplied length.
-            // Walk-around for robust implementation.
-            int to_write = len;
+
+            /**Mandar resultado para cliente**/
+            int out_len = strlen(out_buff) + 1;
+            out_buff[out_len-1] = '\n';
+            int to_write = out_len;
+            //send(sock, out_buff, strlen(out_buff), 0);
             while (to_write > 0) {
-                int written = send(sock, rx_buffer + (len - to_write), to_write, 0);
+                int written = send(sock, out_buff + (out_len - to_write), to_write, 0);
                 if (written < 0) {
                     ESP_LOGE(SERVER_TAG, "Error occurred during sending: errno %d", errno);
                 }
                 to_write -= written;
             }
+            // int to_write = len;
+            // while (to_write > 0) {
+            //     int written = send(sock, rx_buffer + (len - to_write), to_write, 0);
+            //     if (written < 0) {
+            //         ESP_LOGE(SERVER_TAG, "Error occurred during sending: errno %d", errno);
+            //     }
+            //     to_write -= written;
+            // }
         }
     } while (len > 0);
+    /**Fechar socket**/
+    shutdown(sock, 0);
+    close(sock);
+}
+
+static void sendData(int socket)
+{
+    char text[80] = {0};
+    for(int i = 1; i <= 10; i++)
+    {
+        sprintf(text, "Message %d\n", i);
+        send(socket, text, strlen(text), 0);
+        vTaskDelay(1000/portTICK_PERIOD_MS);
+    }
+    shutdown(socket, 1);
+    close(socket);
+}
+
+static void process_client_task(void *data)
+{
+    int clientSocket = (int)data;
+    //sendData(clientSocket);
+    do_retransmit(clientSocket);
+    vTaskDelete(NULL);
 }
 
 void tcp_server_task()
@@ -133,7 +177,7 @@ void tcp_server_task()
     }
     ESP_LOGI(SERVER_TAG, "Socket bound, port %d", PORT);
 
-    err = listen(listen_sock, 5); //ate 5 conexoes
+    err = listen(listen_sock, MAX_CONNECTIONS); //ate 5 conexoes
     if (err != 0) {
         ESP_LOGE(SERVER_TAG, "Error occurred during listen: errno %d", errno);
         goto CLEAN_UP;
@@ -167,10 +211,12 @@ void tcp_server_task()
 #endif
         ESP_LOGI(SERVER_TAG, "Socket accepted ip address: %s", addr_str);
 
-        do_retransmit(sock);
+        xTaskCreate(&process_client_task, "process_task_client", 5120, (void *)sock, 5, NULL);
 
-        shutdown(sock, 0);
-        close(sock);
+        //do_retransmit(sock);
+
+        //shutdown(sock, 0);
+        //close(sock);
     }
 
 CLEAN_UP:

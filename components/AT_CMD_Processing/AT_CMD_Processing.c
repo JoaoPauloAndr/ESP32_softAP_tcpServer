@@ -9,8 +9,8 @@ int getIndex(char* str, char key)
 
 enum input_type checkInput(char *buff, int buff_len, int* return_index)
 {
-    printf("buffer = %s\n", buff);
-    printf("buff len = %d\n", buff_len);
+    // printf("buffer = %s\n", buff);
+    // printf("buff len = %d\n", buff_len);
     if(buff_len < 4)
         return Input_Error;
 
@@ -19,7 +19,7 @@ enum input_type checkInput(char *buff, int buff_len, int* return_index)
     at_cmd[3] = '\0';
     strncpy(at_cmd ,buff, 3);
     at_cmd[3] = '\0';
-    printf("at_cmd = %s\n", at_cmd);
+    //printf("at_cmd = %s\n", at_cmd);
     int check = strcmp("AT+", at_cmd);
     if(check != 0) 
         return Input_Error; 
@@ -131,7 +131,7 @@ int getNumbers(char* buff, int startingIndex, int len, int* reachedComma, int* e
     }else{
         int i;
         int empty = 1;
-        for(i = startingIndex; i < len; i++){
+        for(i = startingIndex; i < len-1; i++){
             char character = buff[i];
             if(isdigit(character)){
                 empty = 0;

@@ -24,7 +24,7 @@ enum input_type checkInput(char *buff, int buff_len, int* return_index)
     if(check != 0) 
         return Input_Error; 
 
-    printf("Verificado comando AT.\n");    
+    //printf("Verificado comando AT.\n");    
     int equalsIndex = getIndex(buff, '=');
     enum input_type num_code = Input_Error;
     if(equalsIndex < buff_len && equalsIndex > 3){
@@ -125,13 +125,21 @@ size_t size(char* msg, int equalsIndex, int len, int* error)
 }
 
 int getNumbers(char* buff, int startingIndex, int len, int* reachedComma, int* error){
-    if(startingIndex == len){
+    /*Fix para bug de mensagem vindo do celular*/
+    //quando a mensagem vem do celular (App "Tcp Udp Server & Client"), 
+    //o ultimo digito da mensagem é um espaço (' ')
+    int msg_len = len;
+    if(buff[msg_len-2] >= '0' && buff[msg_len-2] <= '9' && buff[msg_len-1] == 10)
+    {
+        msg_len -= 1;
+    } 
+    if(startingIndex == msg_len){
         *error = 1;
         return -1;
     }else{
         int i;
         int empty = 1;
-        for(i = startingIndex; i < len-1; i++){
+        for(i = startingIndex; i < msg_len; i++){
             char character = buff[i];
             if(isdigit(character)){
                 empty = 0;
@@ -164,6 +172,7 @@ int mult(char* msg, int equalsIndex, int len, int* error)
 {
     int reachedComma = 0;
     int a = getNumbers(msg, equalsIndex+1, len, &reachedComma, error);
+    //printf("a = %d\n", a);
     if(*error)
     {
         return -1;
@@ -171,6 +180,7 @@ int mult(char* msg, int equalsIndex, int len, int* error)
     else
     {
         int b = getNumbers(msg, reachedComma+1, len, &reachedComma, error);
+        //printf("b = %d\n", b);
         if(*error)
         {
             return -1;

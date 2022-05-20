@@ -76,7 +76,6 @@ static void do_retransmit(const int sock)
                 break;
             }
 
-
             /**Mandar resultado para cliente**/
             int out_len = strlen(out_buff) + 1;
             out_buff[out_len-1] = '\n';
@@ -89,14 +88,6 @@ static void do_retransmit(const int sock)
                 }
                 to_write -= written;
             }
-            // int to_write = len;
-            // while (to_write > 0) {
-            //     int written = send(sock, rx_buffer + (len - to_write), to_write, 0);
-            //     if (written < 0) {
-            //         ESP_LOGE(SERVER_TAG, "Error occurred during sending: errno %d", errno);
-            //     }
-            //     to_write -= written;
-            // }
         }
     } while (len > 0);
     /**Fechar socket**/
@@ -177,7 +168,7 @@ void tcp_server_task()
     }
     ESP_LOGI(SERVER_TAG, "Socket bound, port %d", PORT);
 
-    err = listen(listen_sock, MAX_CONNECTIONS); //ate 5 conexoes
+    err = listen(listen_sock, MAX_CONNECTIONS);
     if (err != 0) {
         ESP_LOGE(SERVER_TAG, "Error occurred during listen: errno %d", errno);
         goto CLEAN_UP;
